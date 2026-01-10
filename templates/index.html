@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>mSimple Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="calculator">
+    <h1>Simple Calculator</h1>
+
+    <form method="POST">
+        <label>First Number</label>
+        <input type="number" name="num1" required>
+
+        <label>Operation</label>
+        <select name="operation" required>
+            <option value="">Select operation</option>
+            <option value="+">+</option>
+            <option value="-">-</option>
+            <option value="*">*</option>
+            <option value="/">/</option>
+        </select>
+
+        <label>Second Number</label>
+        <input type="number" name="num2" required>
+
+        <button type="submit">Calculate</button>
+    </form>
+
+    <div class="result">
+        {% if result is not none %}
+            <p><strong>Result:</strong> {{ result }}</p>
+        {% elif error %}
+            <p style="color:red;">{{ error }}</p>
+        {% else %}
+            <p>Result will appear here</p>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

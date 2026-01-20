@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>mSimple Calculator</title>
+    <title>Simple Calculator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .signature {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #999;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
@@ -39,6 +49,8 @@
         {% endif %}
     </div>
 </div>
+
+<div class="signature">ARZ</div>
 
 </body>
 </html>

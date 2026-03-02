@@ -2,46 +2,279 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Simple Calculator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=css_version) }}">
 </head>
 <body>
+    <main class="page">
+        <section class="phone" aria-label="Phone calculator">
+            <header class="topbar">
+                <h1>Calculator</h1>
+                <p>Arz</p>
+            </header>
 
-<div class="calculator">
-    <h1>Simple Calculator</h1>
+            <section class="display" aria-live="polite">
+                <p class="history" id="history">&nbsp;</p>
+                <p class="screen" id="screen">0</p>
+            </section>
 
-    <form method="POST">
-        <label>First Number</label>
-        <input type="number" name="num1" required>
+            <form method="POST" id="calc-form" action="{{ url_for('calculator') }}">
+                <input type="hidden" name="num1" id="num1-input">
+                <input type="hidden" name="num2" id="num2-input">
+                <input type="hidden" name="operation" id="operation-input">
 
-        <label>Operation</label>
-        <select name="operation" required>
-            <option value="">Select operation</option>
-            <option value="+">+</option>
-            <option value="-">-</option>
-            <option value="*">*</option>
-            <option value="/">/</option>
-        </select>
+                <div class="keys" role="group" aria-label="Calculator keypad">
+                    <button type="button" class="key key-fn" data-action="clear">AC</button>
+                    <button type="button" class="key key-fn" data-action="delete">DEL</button>
+                    <button type="button" class="key key-op" data-op="/">/</button>
+                    <button type="button" class="key key-op" data-op="*">x</button>
 
-        <label>Second Number</label>
-        <input type="number" name="num2" required>
+                    <button type="button" class="key" data-digit="7">7</button>
+                    <button type="button" class="key" data-digit="8">8</button>
+                    <button type="button" class="key" data-digit="9">9</button>
+                    <button type="button" class="key key-op" data-op="-">-</button>
 
-        <button type="submit">Calculate</button>
-    </form>
+                    <button type="button" class="key" data-digit="4">4</button>
+                    <button type="button" class="key" data-digit="5">5</button>
+                    <button type="button" class="key" data-digit="6">6</button>
+                    <button type="button" class="key key-op" data-op="+">+</button>
 
-    <div class="result">
-        {% if result is not none %}
-            <p><strong>Result:</strong> {{ result }}</p>
-        {% elif error %}
-            <p style="color:red;">{{ error }}</p>
-        {% else %}
-            <p>Result will appear here</p>
-        {% endif %}
-    </div>
-    <div class="signature">ARZ</div>
-</div>
+                    <button type="button" class="key" data-digit="1">1</button>
+                    <button type="button" class="key" data-digit="2">2</button>
+                    <button type="button" class="key" data-digit="3">3</button>
+                    <button type="submit" class="key key-eq" data-action="equals">=</button>
 
+                    <button type="button" class="key key-zero" data-digit="0">0</button>
+                    <button type="button" class="key" data-digit=".">.</button>
+                </div>
+            </form>
 
+            {% if error %}
+            <p class="message error">{{ error }}</p>
+            {% endif %}
+        </section>
+    </main>
 
+    <script id="server-data" type="application/json">
+        {{ dict(result=result, error=error, num1=num1, num2=num2, operation=operation) | tojson }}
+    </script>
+
+    <script>
+        (function () {
+            var serverData = {
+                result: null,
+                error: null,
+                num1: null,
+                num2: null,
+                operation: ""
+            };
+
+            var serverDataEl = document.getElementById("server-data");
+            if (serverDataEl) {
+                try {
+                    serverData = JSON.parse(serverDataEl.textContent || "{}");
+                } catch (e) {
+                    serverData = {
+                        result: null,
+                        error: null,
+                        num1: null,
+                        num2: null,
+                        operation: ""
+                    };
+                }
+            }
+
+            var serverResult = serverData.result;
+            var serverError = serverData.error;
+            var serverNum1 = serverData.num1;
+            var serverNum2 = serverData.num2;
+            var serverOp = serverData.operation || "";
+
+            var screenEl = document.getElementById("screen");
+            var historyEl = document.getElementById("history");
+            var num1Input = document.getElementById("num1-input");
+            var num2Input = document.getElementById("num2-input");
+            var operationInput = document.getElementById("operation-input");
+            var form = document.getElementById("calc-form");
+            var clearBtn = document.querySelector("[data-action='clear']");
+            var deleteBtn = document.querySelector("[data-action='delete']");
+
+            var first = "";
+            var second = "";
+            var op = "";
+
+            function formatNumber(value) {
+                if (value === null || value === undefined) {
+                    return "";
+                }
+                return String(value);
+            }
+
+            function updateDisplay() {
+                var current = second || op || first || "0";
+                screenEl.textContent = current;
+                historyEl.textContent = [first, op, second].filter(Boolean).join(" ") || "\u00A0";
+            }
+
+            function appendDigit(digit) {
+                if (!op) {
+                    if (digit === "." && first.indexOf(".") !== -1) {
+                        return;
+                    }
+                    first = first === "0" && digit !== "." ? digit : first + digit;
+                } else {
+                    if (digit === "." && second.indexOf(".") !== -1) {
+                        return;
+                    }
+                    second = second === "0" && digit !== "." ? digit : second + digit;
+                }
+                updateDisplay();
+            }
+
+            function setOperation(value) {
+                if (!first) {
+                    return;
+                }
+                op = value;
+                updateDisplay();
+            }
+
+            function clearAll() {
+                first = "";
+                second = "";
+                op = "";
+                updateDisplay();
+            }
+
+            function deleteLast() {
+                if (second) {
+                    second = second.slice(0, -1);
+                } else if (op) {
+                    op = "";
+                } else {
+                    first = first.slice(0, -1);
+                }
+                updateDisplay();
+            }
+
+            function submitCalculation() {
+                if (!first || !op || !second) {
+                    return false;
+                }
+                num1Input.value = first;
+                num2Input.value = second;
+                operationInput.value = op;
+                return true;
+            }
+
+            Array.prototype.forEach.call(document.querySelectorAll("[data-digit]"), function (btn) {
+                btn.addEventListener("click", function () {
+                    appendDigit(btn.getAttribute("data-digit"));
+                });
+            });
+
+            Array.prototype.forEach.call(document.querySelectorAll("[data-op]"), function (btn) {
+                btn.addEventListener("click", function () {
+                    setOperation(btn.getAttribute("data-op"));
+                });
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener("click", clearAll);
+            }
+
+            if (deleteBtn) {
+                deleteBtn.addEventListener("click", deleteLast);
+            }
+
+            if (form) {
+                form.addEventListener("submit", function (event) {
+                    if (!submitCalculation()) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            document.addEventListener("keydown", function (event) {
+                if (event.ctrlKey || event.metaKey || event.altKey) {
+                    return;
+                }
+
+                var key = event.key;
+                var code = event.code;
+
+                if (/^[0-9]$/.test(key)) {
+                    event.preventDefault();
+                    appendDigit(key);
+                    return;
+                }
+
+                if (key === "." || key === ",") {
+                    event.preventDefault();
+                    appendDigit(".");
+                    return;
+                }
+
+                if (key === "+" || code === "NumpadAdd") {
+                    event.preventDefault();
+                    setOperation("+");
+                    return;
+                }
+
+                if (key === "-" || code === "NumpadSubtract") {
+                    event.preventDefault();
+                    setOperation("-");
+                    return;
+                }
+
+                if (key === "*" || code === "NumpadMultiply") {
+                    event.preventDefault();
+                    setOperation("*");
+                    return;
+                }
+
+                if (key === "/" || code === "NumpadDivide") {
+                    event.preventDefault();
+                    setOperation("/");
+                    return;
+                }
+
+                if (key === "Backspace") {
+                    event.preventDefault();
+                    deleteLast();
+                    return;
+                }
+
+                if (key === "Escape") {
+                    event.preventDefault();
+                    clearAll();
+                    return;
+                }
+
+                if (key === "Enter" || key === "=" || code === "NumpadEnter") {
+                    event.preventDefault();
+                    if (form && submitCalculation()) {
+                        form.submit();
+                    }
+                }
+            });
+
+            if (serverResult !== null) {
+                first = formatNumber(serverResult);
+                second = "";
+                op = "";
+                screenEl.textContent = formatNumber(serverResult);
+                historyEl.textContent = formatNumber(serverNum1) + " " + serverOp + " " + formatNumber(serverNum2);
+            } else if (serverError) {
+                first = serverNum1 !== null ? formatNumber(serverNum1) : "";
+                second = serverNum2 !== null ? formatNumber(serverNum2) : "";
+                op = serverOp || "";
+                updateDisplay();
+            } else {
+                updateDisplay();
+            }
+        })();
+    </script>
 </body>
 </html>

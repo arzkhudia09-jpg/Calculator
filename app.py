@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from calculator import add, subtract, multiply, divide
+from definition import add, subtract, multiply, divide
 
 app = Flask(__name__)
 
